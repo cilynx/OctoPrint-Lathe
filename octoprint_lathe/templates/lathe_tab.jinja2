@@ -4,7 +4,7 @@
    numberOfClicks: <span data-bind="text: numberOfClicks"></span>
 </div>
 <svg height="200" style="max-height: 100%; max-width: 100%" data-bind="foreach: features" viewbox="-5 -20 100 50">
-   <path stroke="black" fill="none" pointer-events="all" data-bind="click: $root.selectFeature, attr: { d: d(), id: 'Feature-' + position() }" />
+   <path stroke="black" stroke-width="2px" stroke-linejoin="round" vector-effect="non-scaling-stroke" fill="none" pointer-events="all" data-bind="click: $root.selectFeature, attr: { d: d(), id: 'Feature-' + position() }" />
 </svg>
 
 <button data-bind="click: addFeature">Add Feature</button>
