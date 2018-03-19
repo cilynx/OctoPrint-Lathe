@@ -43,6 +43,7 @@ $(function() {
       self.addFeature = function() {
 	 console.log("addFeature");
 	 self.features.push(new Feature(self.lastFeature()));
+	 $('#Feature-' + self.lastFeature().position()).click();
       }; 
 
       self.selectFeature = function(data, event) {
