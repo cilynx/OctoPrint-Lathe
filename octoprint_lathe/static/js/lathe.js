@@ -3,6 +3,7 @@ $(function() {
    function Feature(previousFeature) {
       var self = this;
 
+      self.selected = ko.observable(false);
       console.log("previousFeature: ", previousFeature);
       self.position = ko.computed(function() { return previousFeature ? previousFeature.position()+1 : 0; }, self);
       console.log("self.position: ", self.position());
@@ -48,6 +49,8 @@ $(function() {
 	 console.log("selectFeature");
 	 self.numberOfClicks(self.numberOfClicks() + 1);
 	 self.selectedFeature(event.target.id);
+	 self.features().forEach(function(item, index) { item.selected(false); });
+	 self.features()[event.target.id.replace("Feature-","")].selected(true);
 	 $("path").css("fill", "none");
 	 event.target.style.fill = "red";
       };  

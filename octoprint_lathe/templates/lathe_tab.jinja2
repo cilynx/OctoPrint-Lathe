@@ -9,11 +9,12 @@
 
 <button data-bind="click: addFeature">Add Feature</button>
 <div data-bind="foreach: features">
-   <h3 data-bind="text: position"></h3>
-   <label>Length</label>
-   <input data-bind="value: length" placeholder="length">
-   <label>Left Diameter</label>
-   <input data-bind="value: leftDiameter" placeholder="leftDiameter">
-   <label>Right Diameter</label>
-   <input data-bind="value: rightDiameter" placeholder="rightDiameter">
+   <div data-bind="visible: selected">
+      <label>Length</label>
+      <input data-bind="value: length" placeholder="length"></span>
+      <label>Left Diameter</label>
+      <input data-bind="value: leftDiameter" placeholder="leftDiameter">
+      <label>Right Diameter</label>
+      <input data-bind="value: rightDiameter" placeholder="rightDiameter">
+   </div>
 </div>
