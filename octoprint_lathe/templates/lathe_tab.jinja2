@@ -10,11 +10,33 @@
 <button data-bind="click: addFeature">Add Feature</button>
 <div data-bind="foreach: features">
    <div data-bind="visible: selected">
-      <label>Length</label>
-      <input data-bind="value: length" placeholder="length"></span>
-      <label>Left Diameter</label>
-      <input data-bind="value: leftDiameter" placeholder="leftDiameter">
-      <label>Right Diameter</label>
-      <input data-bind="value: rightDiameter" placeholder="rightDiameter">
+      <div class="btn-group" role="group" aria-label="...">
+	 <button type="button" class="btn btn-default" data-bind="click: shape.bind($data, 'straight'), css: { active: shape() === 'straight' }">Straight</button>
+	 <button type="button" class="btn btn-default" data-bind="click: shape.bind($data, 'elliptical'), css: { active: shape() === 'elliptical' }">Elliptical</button>
+      </div>
+      <p>
+      <table class="table">
+	 <tr>
+	    <td>
+	       <label>Length</label>
+	       <input data-bind="value: length" placeholder="length">
+	       <label>Left Diameter</label>
+	       <input data-bind="value: leftDiameter" placeholder="leftDiameter">
+	       <label>Right Diameter</label>
+	       <input data-bind="value: rightDiameter" placeholder="rightDiameter">
+	    </td>
+	    <td class="col-md-6" id="ellipticalParameters" data-bind="visible: shape() === 'elliptical'">
+	       <label>X Radius</label>
+	       <input data-bind="value: xRadius" placeholder="xRadius">
+	       <label>Z Radius</label>
+	       <input data-bind="value: zRadius" placeholder="zRadius">
+	       <label>Direction</label>
+	       <div class="btn-group" role="group" aria-label="...">
+		  <button type="button" class="btn btn-default" data-bind="click: convex.bind($data, 1), css: { active: convex() }">Convex</button>
+		  <button type="button" class="btn btn-default" data-bind="click: convex.bind($data, 0), css: { active: !convex() }">Concave</button>
+	       </div>
+	    </td>
+	 </tr>
+      </table>
    </div>
 </div>

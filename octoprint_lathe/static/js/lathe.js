@@ -17,14 +17,30 @@ $(function() {
       console.log("self.rightDiameter: ", self.rightDiameter());
       self.end = ko.computed(function() { return +self.start() + +self.length(); }, self);
       console.log("self.end: ", self.end());
+
+      self.shape = ko.observable('straight');
+      console.log("self.shape: ", self.shape());
+
       self.d = ko.computed(function() {
-	 return "M" + self.start() + " " + -self.leftDiameter()/2 +			// Upper Left
-	 " l" + self.length() + " " + (self.leftDiameter()-self.rightDiameter())/2 +	// Upper Right
-	 " l0" + " " + self.rightDiameter() +						// Lower Right
-	 " l" + -self.length() + " " + -(self.rightDiameter()-self.leftDiameter())/2 +	// Lower Left
-	 " z";										// Close the Path 
+	 if(self.shape() === 'straight') {
+	    return "M" + self.start() + " " + -self.leftDiameter()/2 +				// Upper Left
+	       " l" + self.length() + " " + (self.leftDiameter()-self.rightDiameter())/2 +	// Upper Right
+	       " l0" + " " + self.rightDiameter() +						// Lower Right
+	       " l" + -self.length() + " " + -(self.rightDiameter()-self.leftDiameter())/2 +	// Lower Left
+	       " z";										// Close the Path 
+	 } else if(self.shape() === 'elliptical') {
+	    return "M" + self.start() + " " + -self.leftDiameter()/2 +				// Upper Left
+	       " a" + self.zRadius() + " " + self.xRadius() + " 0 0 " + self.convex() + " " + self.length() + " " + (self.leftDiameter()-self.rightDiameter())/2 +	// Upper Right
+	       " l0" + " " + self.rightDiameter() +						// Lower Right
+	       " a" + self.zRadius() + " " + self.xRadius() + " 0 0 " + self.convex() + " " + -self.length() + " " + -(self.rightDiameter()-self.leftDiameter())/2 +	// Lower Left
+	       " z";										// Close the Path 
+	 }
       }, self);
       console.log("self.d: ", self.d());
+
+      self.xRadius = ko.observable(self.leftDiameter());
+      self.zRadius = ko.observable(self.leftDiameter());
+      self.convex = ko.observable(0);
    }
 
    function LatheViewModel(parameters) {
