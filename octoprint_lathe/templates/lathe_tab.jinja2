@@ -1,13 +1,15 @@
 <div>
-   Selected: <span data-bind="text: selectedFeature"></span>
-   <p>
-   numberOfClicks: <span data-bind="text: numberOfClicks"></span>
+Selected: <span data-bind="text: selectedFeature"></span>
+<p>
+numberOfClicks: <span data-bind="text: numberOfClicks"></span>
 </div>
 <svg height="200" style="max-height: 100%; max-width: 100%" data-bind="foreach: features" viewbox="-5 -20 100 50">
    <path stroke="black" stroke-width="2px" stroke-linejoin="round" vector-effect="non-scaling-stroke" fill="none" pointer-events="all" data-bind="click: $root.selectFeature, attr: { d: d(), id: 'Feature-' + position() }" />
 </svg>
 
-<button data-bind="click: addFeature">Add Feature</button>
+<button type="button" class="btn btn-default" data-bind="click: addFeature">Add Feature</button><br>
+<button type="button" class="btn btn-default" data-bind="click: showGcode">Show Gcode</button>
+
 <div data-bind="foreach: features">
    <div data-bind="visible: selected">
       <div class="btn-group" role="group" aria-label="...">
@@ -18,18 +20,26 @@
       <table class="table">
 	 <tr>
 	    <td>
-	       <label>Length</label>
+	       <label>Length (mm)</label>
 	       <input data-bind="value: length" placeholder="length">
-	       <label>Left Diameter</label>
+	       <label>Left Diameter (mm)</label>
 	       <input data-bind="value: leftDiameter" placeholder="leftDiameter">
-	       <label>Right Diameter</label>
+	       <label>Right Diameter (mm)</label>
 	       <input data-bind="value: rightDiameter" placeholder="rightDiameter">
+	       <label>Resolution (turns/mm)</label>
+	       <input data-bind="value: resolution" placeholder="resolution">
+	       <label>Feed Rate (mm/min)</label>
+	       <input data-bind="value: feedRate" placeholder="feedRate">
+	       <label>Stock Diameter (mm)</label>
+	       <input data-bind="value: stockDiameter" placeholder="stockDiameter">
 	    </td>
 	    <td class="col-md-6" id="ellipticalParameters" data-bind="visible: shape() === 'elliptical'">
 	       <label>X Radius</label>
 	       <input data-bind="value: xRadius" placeholder="xRadius">
 	       <label>Z Radius</label>
 	       <input data-bind="value: zRadius" placeholder="zRadius">
+	       <label>Segments ($fn)</label>
+	       <input data-bind="value: fn" placeholder="fn">
 	       <label>Direction</label>
 	       <div class="btn-group" role="group" aria-label="...">
 		  <button type="button" class="btn btn-default" data-bind="click: convex.bind($data, 1), css: { active: convex() }">Convex</button>
@@ -38,5 +48,17 @@
 	    </td>
 	 </tr>
       </table>
+   </div>
+</div>
+
+<div id="ViewGcodeModal" class="modal hide fade">
+   <div class="modal-header">
+      <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+      <h3>View Gcode</h3>
+   </div>
+   <div class="modal-body"></div>
+   <div class="modal-footer">
+      <a href="#" class="btn btn-success" data-dismiss="modal" aria-hidden="true" data-bind="click: sendGcode">Send to Machine</a>
+      <a href="#" class="btn btn-danger" data-dismiss="modal" aria-hidden="true">Dismiss</a>
    </div>
 </div>

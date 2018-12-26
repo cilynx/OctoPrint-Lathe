@@ -1,6 +1,6 @@
 $(function () {
     "use strict";
-    function EndpointArcGcode(x1, y1, x2, y2, rx, ry, phi, fA, fS, fn) {
+    function EndpointArcGcode(x1, y1, x2, y2, rx, ry, phi, fA, fS, fn, fP, fF, fY) {
         // x1   Absolute coordinate of starting point
         // y1   Absolute coordinate of starting point
         // x2   Absolute coordinate of ending point
@@ -11,6 +11,9 @@ $(function () {
         // fA   0 if arc spans <180 degrees, 1 if arc spans >180 degrees
         // fS   0 if sweep decreasing, 1 if sweep increasing
         // fn   Number of segments in linear approximation
+        // fP   Pitch (turns/mm)
+        // fF   Feed rate (mm/min)
+        // fY   Y Start
 
         // SVG Implementation Notes:
         // https://www.w3.org/TR/SVG/implnote.html#ArcConversionEndpointToCenter
@@ -95,13 +98,18 @@ $(function () {
             ]
         );
 
-        console.log("G1 X" + y2, "Z" + x2, ";");
+        var gcode = "G1 X" + y2 + " Z" + x2 + " Y" + fY + " F" + fF + "\n";
+        var z_previous = x2;
         for(var i = coords.length - 1; i > 0; i--) {
-            console.log("G1 X" + coords[i][1], "Z" + coords[i][0], ";", i);
+            gcode += "G1 X" + coords[i][1].toFixed(6) + " Z" + coords[i][0].toFixed(6) + " Y" + (fY+360*fP*(z_previous - coords[i][0])).toFixed(6) + "\n";
+            fY = fY+360*fP*(z_previous - coords[i][0])
+            z_previous = coords[i][0];
         }
-        console.log("G1 X" + y1, "Z" + x1, ";");
+        gcode += "G1 X" + y1 + " Z" + x1 + " Y" + (fY+360*fP*(z_previous - x1)).toFixed(6) + "\n";
 
-        console.log("Bar");
+        console.log(gcode);
+
+        return(gcode);
     }
 
     function Feature(previousFeature) {
@@ -119,11 +127,35 @@ $(function () {
         console.log("self.leftDiameter", self.leftDiameter());
         self.rightDiameter = ko.observable(self.leftDiameter());
         console.log("self.rightDiameter: ", self.rightDiameter());
+        self.resolution = ko.observable(previousFeature ? previousFeature.resolution() : 1);
+        console.log("self.resolution: ", self.resolution());
+        self.feedRate = ko.observable(previousFeature ? previousFeature.feedRate() : 10000);
+        console.log("self.feedRate: ", self.feedRate());
+        self.fn= ko.observable(previousFeature ? previousFeature.fn() : 10);
+        console.log("self.fn: ", self.fn());
+        self.stockDiameter = ko.observable(previousFeature ? previousFeature.stockDiameter() : 30);
+        console.log("self.stockDiameter: ", self.stockDiameter());
         self.end = ko.computed(function() { return +self.start() + +self.length(); }, self);
         console.log("self.end: ", self.end());
+        self.nextEnd = ko.observable(false);
+        console.log("self.nextEnd: ", self.nextEnd());
+        self.yStart = ko.computed(function() { return self.nextEnd() ? self.nextEnd() : 0; }, self);
+        console.log("self.yStart: ", self.yStart());
+        self.yEnd = ko.computed(function() { return self.yStart() + 360*self.resolution()*(self.end()-self.start()); }, self);
+        console.log("self.yEnd: ", self.yEnd());
 
+        if(previousFeature) {
+            previousFeature.nextEnd(self.yEnd());
+        }
+
+        //        self.yEnd = ko.computed(function() { return previousFeature ? previousFeature.yStart() : 0; }, self);
+        //        console.log("self.yEnd: ", self.yEnd());
+        //        self.yStart = ko.computed(function() { return self.yEnd() - 360*self.resolution()*(self.end()-self.start()); }, self);
+        //        console.log("self.yStart: ", self.yStart());
         self.shape = ko.observable("straight");
         console.log("self.shape: ", self.shape());
+
+        self.gcode = "";
 
         self.d = ko.computed(function() {
             if(self.shape() === "straight") {
@@ -133,7 +165,7 @@ $(function () {
                 " l" + -self.length() + " " + -(self.rightDiameter()-self.leftDiameter())/2 +   // Lower Left
                 " z";                                                                           // Close the Path
             } else if(self.shape() === "elliptical") {
-                EndpointArcGcode(
+                self.gcode = EndpointArcGcode(
                     self.start(),               // z1   Absolute coordinate of starting point
                     self.leftDiameter()/2,      // x1   Absolute coordinate of starting point
                     self.end(),                 // z2   Absolute coordinate of ending point
@@ -142,8 +174,11 @@ $(function () {
                     self.xRadius(),             // rx   X-Radius of ellipse
                     0,                          // phi  Ellipse axis rotation
                     0,                          // fA   0 if arc spans <180 degrees, 1 if arc spans >180 degrees
-                    self.convex() ? 0 : 1,	// fS   0 if sweep decreasing, 1 if sweep increasing
-                    10                          // fn   Number of segments in linear approximation
+                    self.convex() ? 0 : 1,      // fS   0 if sweep decreasing, 1 if sweep increasing
+                    self.fn(),                  // fn   Number of segments in linear approximation
+                    self.resolution(),          // fP   Pitch (turns/mm)
+                    self.feedRate(),            // fF   Feed rate (mm/min)
+                    self.yStart()               // fY   Y start position
                 );
                 return "M" + self.start() + " " + -self.leftDiameter()/2 +                      // Upper Left
                 " a" + self.zRadius() + " " + self.xRadius() + " 0 0 " + self.convex() + " " +  // Upper Right
@@ -166,6 +201,7 @@ $(function () {
 
         self.loginState = parameters[0];
         self.settings = parameters[1];
+        self.terminal = parameters[2];
 
         self.selectedFeature = ko.observable("None");
         self.numberOfClicks = ko.observable(0);
@@ -180,12 +216,40 @@ $(function () {
             $("#Feature-" + self.lastFeature().position()).click();
         };
 
+        self.generateGcode = function() {
+            var gcode = "";
+            var z_max = 0;
+            var x_max = 0;
+            self.features().slice().reverse().forEach(function(item) {
+                if(item.end() > z_max) { z_max = item.end(); }
+                if(item.stockDiameter() / 2 > x_max) { x_max = item.stockDiameter() / 2; }
+                gcode += "; Begin Feature-" + item.position() + "\n" + item.gcode + "; End Feature-" + item.position() + "\n";
+            });
+            return("; Begin inital positioning\nG0 X" + (x_max+5) + "\nG0 Z" + (z_max+5) + " Y0\n; End initial positioning\n" + gcode);
+        };
+
+        self.showGcode = function() {
+            console.log("showGcode");
+            $("#ViewGcodeModal").find('.modal-body').html(self.generateGcode().replace(/\n/g, "<br>\n"));
+            $("#ViewGcodeModal").modal();
+        };
+
+        self.sendGcode = function() {
+            console.log("sendGcode");
+            console.log(self.generateGcode());
+            self.generateGcode().split("\n").forEach(function(line) {
+                self.terminal.command(line);
+                self.terminal.sendCommand();
+            });
+        }
+
         self.selectFeature = function(data, event) {
             console.log("selectFeature");
+            var id = event.target.id.replace("Feature-","");
             self.numberOfClicks(self.numberOfClicks() + 1);
-            self.selectedFeature(event.target.id);
+            self.selectedFeature("Feature-" + id);
             self.features().forEach(function(item) { item.selected(false); });
-            self.features()[event.target.id.replace("Feature-","")].selected(true);
+            self.features()[id].selected(true);
             $("path").css("fill", "none");
             event.target.style.fill = "red";
         };
@@ -200,7 +264,7 @@ $(function () {
         // This is a list of dependencies to inject into the plugin, the order which you request here is the order
         // in which the dependencies will be injected into your view model upon instantiation via the parameters
         // argument
-        ["loginStateViewModel", "settingsViewModel"],
+        ["loginStateViewModel", "settingsViewModel", "terminalViewModel"],
 
         // Finally, this is the list of all elements we want this view model to be bound to.
         [document.getElementById("tab_plugin_lathe")]
